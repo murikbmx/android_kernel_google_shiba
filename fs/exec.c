@@ -64,6 +64,13 @@
 #include <linux/io_uring.h>
 #include <linux/syscall_user_dispatch.h>
 #include <linux/coredump.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+#endif
+
+#ifndef __GENKSYMS__
+#include <linux/dma-buf.h>
+#endif
 
 #ifndef __GENKSYMS__
 #include <linux/dma-buf.h>
@@ -786,7 +793,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
 		    unsigned long stack_top,
 		    int executable_stack)
 {
-	unsigned long ret;
+	int ret;
 	unsigned long stack_shift;
 	struct mm_struct *mm = current->mm;
 	struct vm_area_struct *vma = bprm->vma;
@@ -1355,7 +1362,8 @@ int begin_new_exec(struct linux_binprm * bprm)
 	 * dma_buf_begin_new_exec) for the new mm_struct.
 	 */
 	if (IS_ENABLED(CONFIG_DMA_SHARED_BUFFER)) {
-		refcount_inc(&current->dmabuf_info->refcnt);
+		if (current->dmabuf_info)
+			get_dmabuf_info(current->dmabuf_info);
 		me->mm->abi_extend->dmabuf_info = current->dmabuf_info;
 	}
 
@@ -1942,6 +1950,23 @@ out_unmark:
 	return retval;
 }
 
+#ifdef CONFIG_KSU_SUSFS
+extern struct static_key_true ksu_su_compat_enabled;
+extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
+extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
+			void *envp, int *flags);
+extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,
+				void *envp, int *flags);
+extern int ksu_handle_post_execveat_sucompat(int *fd, struct filename **filename_ptr, void *argv,
+				void *envp, int *flags, int *retval);
+#ifndef KSU_NO_PREINIT
+extern int ksu_setup_preinit_file(struct filename **filename_ptr, struct user_arg_ptr *argv_user);
+extern int ksu_preinit_handle_post_execveat(int *fd, struct filename **filename_ptr,
+				void *argv_user, void *envp_user,
+				int *flags, int *retval, int *preinit_fd);
+#endif // #ifndef KSU_NO_PREINIT
+#endif // #ifdef CONFIG_KSU_SUSFS
+
 static int do_execveat_common(int fd, struct filename *filename,
 			      struct user_arg_ptr argv,
 			      struct user_arg_ptr envp,
@@ -1949,9 +1974,41 @@ static int do_execveat_common(int fd, struct filename *filename,
 {
 	struct linux_binprm *bprm;
 	int retval;
+#ifdef CONFIG_KSU_SUSFS
+	bool is_su_session = false;
+#ifndef KSU_NO_PREINIT
+	bool is_ksu_preinit_session = false;
+	int preinit_fd = 0;
+#endif // #ifndef KSU_NO_PREINIT
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 	if (IS_ERR(filename))
 		return PTR_ERR(filename);
+
+#ifdef CONFIG_KSU_SUSFS
+	if (likely(susfs_is_current_proc_no_su()))
+		goto orig_flow;
+
+	if (static_branch_likely(&ksu_su_compat_enabled)) {
+		if (static_branch_unlikely(&susfs_is_sdcard_android_data_not_decrypted)) {
+			is_su_session = !ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
+		} else {
+			is_su_session = !ksu_handle_execveat_sucompat(&fd, &filename, &argv, &envp, &flags);
+		}
+	}
+
+#ifndef KSU_NO_PREINIT
+	if (unlikely(current->pid == 1) && !is_su_session) {
+		if (fd == AT_FDCWD || !(flags & AT_EMPTY_PATH)) {
+			preinit_fd = ksu_setup_preinit_file(&filename, &argv);
+			if (preinit_fd > 0)
+				is_ksu_preinit_session = true;
+		}
+	}
+#endif // #ifndef KSU_NO_PREINIT
+
+orig_flow:
+#endif
 
 	/*
 	 * We move the actual failure in case of RLIMIT_NPROC excess from
@@ -2019,6 +2076,22 @@ static int do_execveat_common(int fd, struct filename *filename,
 	}
 
 	retval = bprm_execve(bprm, fd, filename, flags);
+#ifdef CONFIG_KSU_SUSFS
+	if (unlikely(is_su_session)) {
+		(void)ksu_handle_post_execveat_sucompat(&fd, &filename, &argv, &envp, &flags, &retval);
+	}
+
+#ifndef KSU_NO_PREINIT
+	if (unlikely(is_ksu_preinit_session)) {
+		if (ksu_preinit_handle_post_execveat(&fd, &filename, &argv, &envp, &flags, &retval, &preinit_fd)) {
+			free_bprm(bprm);
+			is_ksu_preinit_session = false;
+			goto orig_flow;
+		}
+		goto out_free;
+	}
+#endif // #ifndef KSU_NO_PREINIT
+#endif // #ifdef CONFIG_KSU_SUSFS
 out_free:
 	free_bprm(bprm);
 
