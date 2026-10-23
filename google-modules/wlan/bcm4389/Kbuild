@@ -1,6 +1,6 @@
 # bcmdhd
 #
-# Copyright (C) 2025, Broadcom.
+# Copyright (C) 2026, Broadcom.
 #
 #      Unless you and Broadcom execute a separate written software license
 # agreement governing use of this software, this software is licensed to you
@@ -979,7 +979,6 @@ ccflags-y += $(DHDCFLAGS)
 # For in-tree model, define make rules here (KERNEL_SRC will be NULL)
 ifeq ($(KERNEL_SRC),)
 all:
-	@echo "$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules $(KBUILD_OPTIONS)"
 	@$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules $(KBUILD_OPTIONS)
 
 modules_install:

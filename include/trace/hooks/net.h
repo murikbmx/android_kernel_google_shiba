@@ -55,6 +55,8 @@ DECLARE_HOOK(android_vh_udp_enqueue_schedule_skb,
 DECLARE_HOOK(android_vh_build_skb_around,
 	TP_PROTO(struct sk_buff *skb), TP_ARGS(skb));
 
+struct file;
+struct socket;
 struct poll_table_struct;
 typedef struct poll_table_struct poll_table;
 DECLARE_HOOK(android_vh_netlink_poll,

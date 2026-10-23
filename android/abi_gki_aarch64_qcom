@@ -2362,7 +2362,6 @@
   pci_find_ext_capability
   pci_find_vsec_capability
   pci_flags
-  pci_find_vsec_capability
   pci_free_irq_vectors
   pci_get_device
   pci_get_domain_bus_and_slot

@@ -9,8 +9,6 @@ O := $(abspath $(KDIR))
 M := ../../../kernel
 B := $(abspath $O/$M)
 
-$(info *** Building in $B)
-
 default all: modules
 
 modules modules_install compile_commands.json:

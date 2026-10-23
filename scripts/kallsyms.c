@@ -80,6 +80,7 @@ static int all_symbols;
 static int absolute_percpu;
 static int base_relative;
 static int lto_clang;
+static int lto_gcc;
 
 static int token_profit[0x10000];
 
@@ -91,7 +92,7 @@ static unsigned char best_table_len[256];
 static void usage(void)
 {
 	fprintf(stderr, "Usage: kallsyms [--all-symbols] [--absolute-percpu] "
-			"[--base-relative] [--lto-clang] in.map > out.S\n");
+			"[--base-relative] [--lto-clang] [--lto-gcc] in.map > out.S\n");
 	exit(1);
 }
 
@@ -428,6 +429,19 @@ static char * s_name(char *buf)
 static void cleanup_symbol_name(char *s)
 {
 	char *p;
+
+	if (lto_gcc) {
+		/*
+		 * GCC LTO renames global symbols it privatizes to
+		 * foo.lto_priv.N without changing their ABI, so treat them like
+		 * LLVM's foo.llvm.N. Other GCC clone suffixes (.constprop,
+		 * .isra, .part) change the calling convention and are kept.
+		 */
+		p = strstr(s, ".lto_priv.");
+		if (p)
+			*p = '\0';
+		return;
+	}
 
 	if (!lto_clang)
 		return;
@@ -897,6 +911,7 @@ int main(int argc, char **argv)
 			{"absolute-percpu", no_argument, &absolute_percpu, 1},
 			{"base-relative",   no_argument, &base_relative,   1},
 			{"lto-clang",       no_argument, &lto_clang,       1},
+			{"lto-gcc",         no_argument, &lto_gcc,         1},
 			{},
 		};
 

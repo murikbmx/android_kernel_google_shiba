@@ -166,6 +166,10 @@ kallsyms()
 		kallsymopt="${kallsymopt} --lto-clang"
 	fi
 
+	if is_enabled CONFIG_LTO_GCC; then
+		kallsymopt="${kallsymopt} --lto-gcc"
+	fi
+
 	info KSYMS ${2}
 	scripts/kallsyms ${kallsymopt} ${1} > ${2}
 }
