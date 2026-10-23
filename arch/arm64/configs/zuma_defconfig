@@ -915,3 +915,4 @@ CONFIG_CIFS_POSIX=y
 # NTSync (WildKernels)
 CONFIG_NTSYNC=y
 # NoMount (WildKernels)
+CONFIG_NOMOUNT=y
