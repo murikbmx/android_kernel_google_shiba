@@ -6,12 +6,9 @@ else
 NM_REAL_PATH := $(realpath $(src))
 endif
 
-NOMOUNT_COMMITS := $(shell \
-    d='$(NM_REAL_PATH)'; \
-    while [ -n "$$d" ] && [ "$$d" != "/" ] && [ ! -d "$$d/.git" ]; do d=$$(dirname "$$d"); done; \
-    if [ -d "$$d/.git" ] && git -C "$$d" remote get-url origin 2>/dev/null | grep -q 'nomount'; then \
-        git -C "$$d" rev-list --count HEAD 2>/dev/null; \
-    fi)
+# Vendored into the kernel tree, so the git detection can't see NoMount's own
+# history. Pinned to maxsteeel/nomount v2.2.0 (bf1847f9).
+NOMOUNT_COMMITS := 605
 
 ifneq ($(NOMOUNT_COMMITS),)
 ccflags-y += -DNOMOUNT_COMMIT_COUNT=\"$(NOMOUNT_COMMITS)\"
