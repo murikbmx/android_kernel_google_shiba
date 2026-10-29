@@ -162,9 +162,9 @@ LPATH := /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin
 MDIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Vendored into the kernel tree, so git detection can't see KernelSU-Next's
-# own history. Pinned to what it would compute for pershoot/KernelSU-Next
-# dev-susfs d21e0a66c887 (merge-base with upstream dev b427a3f9).
-KSU_GIT_VERSION := 3405
+# own history. Pinned to what it would compute for upstream KernelSU-Next
+# dev 31946acd2f52.
+KSU_GIT_VERSION := 3445
 KSU_GIT_TAG := v3.4.2
 KSU_GIT_VERSION_VALID := 1
 
