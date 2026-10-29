@@ -296,6 +296,12 @@ These two variables allow to override the user@host string displayed during
 boot and in /proc/version. The default value is the output of the commands
 whoami and host, respectively.
 
+KBUILD_BUILD_COMPILER
+---------------------
+This variable allows to override the compiler and linker version string
+displayed during boot and in /proc/version. The default value is the
+compiler version (CONFIG_CC_VERSION_TEXT) followed by the linker version.
+
 LLVM
 ----
 If this variable is set to 1, Kbuild will use Clang and LLVM utilities instead
